@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نظام الحضور بالتعرف على الوجه</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14506e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="الحضور">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --ink:#18212f; --muted:#5d6b7e; --line:#d9dfe8;
+  --brand:#14506e; --brand-ink:#ffffff; --ok:#16794a; --ok-bg:#e2f5ea;
+  --warn:#8a5a00; --warn-bg:#fff2cf; --bad:#a32727; --bad-bg:#fde5e5;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Tahoma,Arial,sans-serif;font-size:16px;line-height:1.6}
+header{background:var(--brand);color:var(--brand-ink);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:20px}
+#engine{font-size:13px;opacity:.9}
+nav{display:flex;gap:6px;padding:10px 16px 0;flex-wrap:wrap}
+nav button{border:1px solid var(--line);border-bottom:none;background:#e7ebf1;color:var(--ink);padding:9px 18px;border-radius:8px 8px 0 0;font:inherit;cursor:pointer}
+nav button.on{background:var(--card);font-weight:700;color:var(--brand)}
+main{padding:0 16px 30px}
+section{display:none;background:var(--card);border:1px solid var(--line);border-radius:0 8px 8px 8px;padding:18px}
+section.on{display:block}
+h2{margin:0 0 10px;font-size:18px}
+h3{margin:18px 0 8px;font-size:16px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+input[type=text],select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+textarea{width:100%;min-height:100px}
+button.b,label.b{font:inherit;padding:8px 16px;border-radius:6px;border:1px solid var(--brand);background:var(--brand);color:var(--brand-ink);cursor:pointer;display:inline-block}
+.b.alt{background:#fff;color:var(--brand)}
+.b.danger{border-color:var(--bad);background:#fff;color:var(--bad)}
+.b.sm{padding:3px 10px;font-size:14px}
+button.b:disabled{opacity:.5;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #f0a020;outline-offset:1px}
+table{border-collapse:collapse;width:100%;margin-top:8px}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:right;vertical-align:middle}
+th{background:#eef2f6}
+.tablewrap{overflow-x:auto}
+.muted{color:var(--muted);font-size:14px}
+.two{display:grid;grid-template-columns:minmax(260px,420px) 1fr;gap:18px;align-items:start}
+@media(max-width:800px){.two{grid-template-columns:1fr}}
+video{width:100%;background:#000;border-radius:8px;aspect-ratio:4/3;object-fit:cover}
+video.mirror{transform:scaleX(-1)}
+.os{display:none}.os.on{display:block}
+.seg{display:inline-flex;border:1px solid var(--brand);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;border:0;background:#fff;color:var(--brand);padding:8px 22px;cursor:pointer}
+.seg button.on{background:var(--brand);color:#fff;font-weight:700}
+ol.steps li{margin:6px 0}
+#offState{font-weight:700}
+.msg{margin-top:10px;padding:12px;border-radius:8px;font-size:21px;font-weight:700;text-align:center;min-height:64px;background:#eef2f6;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:12px}
+.msg.ok{background:var(--ok-bg);color:var(--ok)}
+.msg.warn{background:var(--warn-bg);color:var(--warn)}
+.msg.bad{background:var(--bad-bg);color:var(--bad)}
+.msg img{width:84px;height:84px;border-radius:8px;object-fit:cover;border:2px solid currentColor}
+#count{font-size:26px;font-weight:700;color:var(--brand)}
+.pill{display:inline-block;padding:1px 10px;border-radius:99px;font-size:13px}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.no{background:var(--bad-bg);color:var(--bad)}
+.pill.man{background:var(--warn-bg);color:var(--warn)}
+.th{width:40px;height:40px;border-radius:6px;object-fit:cover;vertical-align:middle}
+.th.none{display:inline-block;background:#e7ebf1;border:1px dashed var(--line)}
+#storeWarn{display:none;background:var(--bad-bg);color:var(--bad);padding:10px 16px;font-weight:700}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:10px 14px;font-size:14px;margin:10px 0}
+</style>
+</head>
+<body>
+<header><h1>نظام الحضور بالتعرف على الوجه</h1><span id="engine">جارٍ تحميل نماذج التعرف…</span></header>
+<div id="storeWarn">تعذّر الحفظ التلقائي في هذا المتصفح. استخدم «تنزيل نسخة احتياطية» قبل إغلاق الصفحة.</div>
+<nav>
+  <button data-tab="t-scan" class="on">تسجيل الحضور</button>
+  <button data-tab="t-students">الطلاب وتسجيل الوجوه</button>
+  <button data-tab="t-log">السجل والتصدير</button>
+  <button data-tab="t-install" id="tabInstall" hidden>التثبيت على الموبايل</button>
+</nav>
+<main>
+
+<section id="t-scan" class="on">
+  <h2>تسجيل الحضور</h2>
+  <div class="row">
+    <label for="sessSel">المحاضرة:</label>
+    <select id="sessSel"></select>
+    <input type="text" id="sessTitle" placeholder="عنوان محاضرة جديدة" size="26">
+    <button class="b" id="sessNew">محاضرة جديدة</button>
+  </div>
+  <div class="two">
+    <div>
+      <video id="video" playsinline muted></video>
+      <div class="row">
+        <button class="b" id="camStart" disabled>تشغيل الكاميرا</button>
+        <button class="b alt" id="camStop">إيقاف</button>
+        <button class="b alt" id="camFlip">قلب الكاميرا</button>
+        <select id="camSel" aria-label="اختيار الكاميرا"></select>
+      </div>
+      <div class="row">
+        <label for="thrSel">صرامة التطابق:</label>
+        <select id="thrSel">
+          <option value="0.45">صارمة — موصى بها (خلط أقل، رفض أكثر)</option>
+          <option value="0.5">متوسطة</option>
+          <option value="0.55">متساهلة (رفض أقل، خطر خلط أعلى)</option>
+        </select>
+      </div>
+      <div id="msg" class="msg" role="status" aria-live="assertive">شغّل الكاميرا ثم يقف الطالب أمامها</div>
+    </div>
+    <div>
+      <div>الحاضرون: <span id="count">0 / 0</span></div>
+      <div class="row"><input type="text" id="attFilter" placeholder="بحث بالاسم…" size="24" aria-label="بحث بالاسم"></div>
+      <div class="tablewrap"><table id="attTable"></table></div>
+      <p class="muted">إذا سُجّل طالب بالخطأ اضغط «إلغاء» بجانب اسمه. زر «حاضر يدوياً» لمن لم تتعرف عليه الكاميرا.</p>
+    </div>
+  </div>
+</section>
+
+<section id="t-students">
+  <h2>الطلاب وتسجيل الوجوه</h2>
+  <div class="row">
+    <input type="text" id="stName" placeholder="اسم الطالب" size="28">
+    <input type="text" id="stNum" placeholder="الرقم (اختياري)" size="14">
+    <button class="b" id="stAdd">إضافة</button>
+  </div>
+  <h3>إضافة قائمة دفعة واحدة</h3>
+  <p class="muted">اسم واحد في كل سطر. لإضافة رقم اكتبه بعد الاسم مفصولاً بفاصلة، مثال: أحمد علي, 101</p>
+  <textarea id="stBulk"></textarea>
+  <div class="row"><button class="b alt" id="stBulkAdd">إضافة القائمة</button></div>
+
+  <h3>تسجيل وجه الطالب</h3>
+  <div class="two">
+    <div>
+      <video id="videoE" playsinline muted></video>
+      <div class="row">
+        <button class="b" id="enStart" disabled>تشغيل الكاميرا</button>
+        <button class="b alt" id="enStop">إيقاف</button>
+        <button class="b alt" id="enFlip">قلب الكاميرا</button>
+      </div>
+    </div>
+    <div>
+      <div class="row">
+        <label for="enSel">الطالب:</label>
+        <select id="enSel"></select>
+      </div>
+      <div class="row">
+        <button class="b" id="enShot" disabled>التقاط الوجه</button>
+        <label class="b alt">من ملف صورة
+          <input type="file" id="enFile" accept="image/*" style="display:none">
+        </label>
+        <button class="b danger" id="enClear">مسح وجه هذا الطالب</button>
+      </div>
+      <div id="enMsg" class="msg" role="status" aria-live="polite">اختر الطالب، شغّل الكاميرا، ثم اضغط «التقاط الوجه»</div>
+      <p class="muted">يُحفظ حتى 5 لقطات لكل طالب. لقطتان أو ثلاث (مع النظارة وبدونها مثلاً) تحسّن التعرف. يجب أن يظهر وجه واحد فقط، قريباً وبإضاءة جيدة.</p>
+    </div>
+  </div>
+
+  <h3>توحيد القائمة بين التدريسيين</h3>
+  <div class="note">ملف القائمة يحتوي صور الطلاب وبصمات وجوههم. لا يُرسل إلا للتدريسيين المعنيين.</div>
+  <div class="row">
+    <button class="b alt" id="expStudents">تصدير قائمة الطلاب مع الوجوه</button>
+    <label class="b alt">استيراد قائمة طلاب
+      <input type="file" id="impStudents" accept=".json,application/json" style="display:none">
+    </label>
+  </div>
+  <div class="tablewrap"><table id="stTable"></table></div>
+</section>
+
+<section id="t-log">
+  <h2>السجل والتصدير</h2>
+  <div class="row">
+    <button class="b" id="expMatrix">تصدير جدول الحضور الكامل (Excel/CSV)</button>
+    <button class="b alt" id="expBackup">تنزيل نسخة احتياطية</button>
+    <label class="b alt">استرجاع نسخة احتياطية
+      <input type="file" id="impBackup" accept=".json,application/json" style="display:none">
+    </label>
+  </div>
+  <div class="tablewrap"><table id="logTable"></table></div>
+</section>
+
+<section id="t-install">
+  <h2>التثبيت على الموبايل للعمل بدون نت</h2>
+  <p>حالة العمل بدون نت: <span id="offState" class="muted">جارٍ الفحص…</span></p>
+  <div class="row"><span>نوع الموبايل:</span>
+    <div class="seg" role="group" aria-label="نوع الموبايل">
+      <button type="button" id="osAndroid" aria-pressed="false">أندرويد</button>
+      <button type="button" id="osIphone" aria-pressed="false">آيفون</button>
+    </div>
+  </div>
+  <div class="os" id="helpAndroid">
+    <ol class="steps">
+      <li>افتح هذا الرابط في متصفح <b>Chrome</b> والموبايل متصل بالنت.</li>
+      <li>انتظر حتى تصير الحالة في الأعلى «جاهز للعمل بدون نت».</li>
+      <li>اضغط قائمة Chrome (النقاط الثلاث ⋮ أعلى الشاشة).</li>
+      <li>اختر «إضافة إلى الشاشة الرئيسية» أو «تثبيت التطبيق»، ثم وافق.</li>
+      <li>افتح البرنامج بعدها من أيقونته على الشاشة، ووافق على إذن الكاميرا عند أول تشغيل.</li>
+    </ol>
+  </div>
+  <div class="os" id="helpIphone">
+    <ol class="steps">
+      <li>افتح هذا الرابط في متصفح <b>Safari</b> والآيفون متصل بالنت.</li>
+      <li>انتظر حتى تصير الحالة في الأعلى «جاهز للعمل بدون نت».</li>
+      <li>اضغط زر المشاركة (مربع يخرج منه سهم للأعلى).</li>
+      <li>اختر «إضافة إلى الشاشة الرئيسية»، ثم «إضافة».</li>
+      <li>افتح البرنامج بعدها من أيقونته على الشاشة، ووافق على إذن الكاميرا. قد يطلب الآيفون الإذن في كل مرة.</li>
+    </ol>
+    <div class="note">على الآيفون: البيانات المسجّلة داخل الأيقونة مستقلة عن ما سُجّل في Safari قبل التثبيت، فثبّت أولاً ثم أدخل الطلاب. وحذف الأيقونة يحذف بياناتها.</div>
+  </div>
+  <div class="note">خذ «نسخة احتياطية» من تبويب السجل بعد كل محاضرة. بيانات كل جهاز مستقلة عن غيره.</div>
+</section>
+
+</main>
+
+<script>window.__MODELS={};</script>
+<script>
+(function(){
+  var M=window.__MODELS||{}, orig=window.fetch?window.fetch.bind(window):null;
+  window.fetch=function(u,init){
+    var name=String((u&&u.url)||u).split('?')[0].split('/').pop();
+    if(Object.prototype.hasOwnProperty.call(M,name)){
+      var bin=atob(M[name]),n=bin.length,a=new Uint8Array(n);for(var i=0;i<n;i++)a[i]=bin.charCodeAt(i);
+      return Promise.resolve(new Response(a,{status:200,headers:{'Content-Type':/\.json$/.test(name)?'application/json':/\.wasm$/.test(name)?'application/wasm':'application/octet-stream'}}));
+    }
+    return orig?orig(u,init):Promise.reject(new Error('no fetch'));
+  };
+})();
+</script>
+<script src="face-api.js"></script>
+<script>
+(function(){
+'use strict';
+var KEY='face_attendance_v1', MAXS=5, MARGIN=0.04;
+var state={students:[],sessions:[],current:null,thr:0.45};
+var ready=false;
+var $=function(id){return document.getElementById(id)};
+
+function load(){
+  try{var s=localStorage.getItem(KEY); if(s){var o=JSON.parse(s); if(o&&o.students&&o.sessions) state=o;}}
+  catch(e){$('storeWarn').style.display='block'}
+  if([0.45,0.5,0.55].indexOf(state.thr)<0) state.thr=0.45;
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(state)); $('storeWarn').style.display='none'}
+  catch(e){$('storeWarn').style.display='block'}
+}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function rnd(n){var a=new Uint8Array(n),o='',ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';crypto.getRandomValues(a);for(var i=0;i<n;i++)o+=ch[a[i]%ch.length];return o}
+function p2(n){return (n<10?'0':'')+n}
+function today(){var d=new Date();return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+function nowT(){var d=new Date();return p2(d.getHours())+':'+p2(d.getMinutes())+':'+p2(d.getSeconds())}
+function curSess(){for(var i=0;i<state.sessions.length;i++)if(state.sessions[i].id===state.current)return state.sessions[i];return null}
+function byId(id){for(var i=0;i<state.students.length;i++)if(state.students[i].id===id)return state.students[i];return null}
+function thumbOk(t){return typeof t==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(t)&&t.length<60000}
+function thumbHtml(s,cls){return thumbOk(s.thumb)?'<img class="'+(cls||'th')+'" alt="" src="'+s.thumb+'">':'<span class="th none"></span>'}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+
+/* ---------- tabs ---------- */
+Array.prototype.forEach.call(document.querySelectorAll('nav button'),function(b){
+  b.addEventListener('click',function(){
+    Array.prototype.forEach.call(document.querySelectorAll('nav button'),function(x){x.classList.toggle('on',x===b)});
+    Array.prototype.forEach.call(document.querySelectorAll('main section'),function(s){s.classList.toggle('on',s.id===b.dataset.tab)});
+    stopCam();
+    renderAll();
+  });
+});
+
+/* ---------- face engine ---------- */
+function initEngine(){
+  var f=window.faceapi;
+  if(!f){$('engine').textContent='تعذّر تحميل مكتبة التعرف';return Promise.resolve()}
+  function tryB(list){
+    if(!list.length) return Promise.reject(new Error('no backend'));
+    var forced=(location.hash.match(/backend=(\w+)/)||[])[1];
+    if(forced&&list.length>1&&list[0]!==forced) return tryB(list.slice(1));
+    return f.tf.setBackend(list[0]).then(function(ok){if(!ok) throw 0},function(){throw 0}).then(null,function(){return tryB(list.slice(1))});
+  }
+  return tryB(['webgl','wasm','cpu']).then(function(){return f.tf.ready()}).then(function(){
+    return Promise.all([f.nets.ssdMobilenetv1.loadFromUri('models'),f.nets.faceLandmark68Net.loadFromUri('models'),f.nets.faceRecognitionNet.loadFromUri('models')]);
+  }).then(function(){
+    ready=true; window.__MODELS=null;
+    var be=f.tf.getBackend();
+    $('engine').textContent='محرك التعرف جاهز ('+(be==='webgl'?'سريع — كرت الشاشة':be==='wasm'?'متوسط السرعة — المعالج':'بطيء جداً — المعالج')+')';
+    $('camStart').disabled=false;$('enStart').disabled=false;
+  }).catch(function(e){$('engine').textContent='فشل تحميل نماذج التعرف: '+(e&&e.message||e)});
+}
+/* returns {count, desc:Array(128), box:{x,y,w,h}, fw, fh} for the largest face, or {count:0} */
+function analyze(input){
+  var f=window.faceapi;
+  return f.detectAllFaces(input,new f.SsdMobilenetv1Options({minConfidence:0.6,maxResults:5})).withFaceLandmarks().withFaceDescriptors().then(function(ds){
+    var fw=input.videoWidth||input.naturalWidth||input.width, fh=input.videoHeight||input.naturalHeight||input.height;
+    if(!ds.length) return {count:0,fw:fw,fh:fh};
+    ds.sort(function(a,b){return b.detection.box.area-a.detection.box.area});
+    var b=ds[0].detection.box, d=[];
+    for(var i=0;i<ds[0].descriptor.length;i++) d.push(Math.round(ds[0].descriptor[i]*10000)/10000);
+    return {count:ds.length,desc:d,box:{x:b.x,y:b.y,w:b.width,h:b.height},fw:fw,fh:fh};
+  });
+}
+function dist(a,b){var s=0;for(var i=0;i<128;i++){var d=a[i]-b[i];s+=d*d}return Math.sqrt(s)}
+/* best student for a descriptor; skipId lets enrollment ignore the student being enrolled */
+function match(desc,skipId){
+  var best=null,bd=9,second=9;
+  state.students.forEach(function(s){
+    if(s.id===skipId||!s.descs||!s.descs.length) return;
+    var m=9;s.descs.forEach(function(x){var d=dist(desc,x);if(d<m)m=d});
+    if(m<bd){second=bd;bd=m;best=s}else if(m<second)second=m;
+  });
+  return {student:best,d:bd,second:second,ok:!!best&&bd<=state.thr&&(second-bd)>=MARGIN};
+}
+function cropThumb(input,r){
+  var c=document.createElement('canvas');c.width=c.height=96;
+  var pad=r.box.w*0.3, sz=Math.max(r.box.w,r.box.h)+pad*2, cx=r.box.x+r.box.w/2, cy=r.box.y+r.box.h/2;
+  var sx=Math.max(0,cx-sz/2), sy=Math.max(0,cy-sz/2), sw=Math.min(sz,r.fw-sx), sh=Math.min(sz,r.fh-sy);
+  c.getContext('2d').drawImage(input,sx,sy,sw,sh,0,0,96,96);
+  return c.toDataURL('image/jpeg',0.7);
+}
+
+/* ---------- camera (one stream shared by the two tabs) ---------- */
+var stream=null, activeVideo=null, running=false, actx=null, facing='user', useFacing=false, curDev='';
+function beep(freq,ms){
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    var o=actx.createOscillator(),g=actx.createGain();o.frequency.value=freq;g.gain.value=0.15;
+    o.connect(g);g.connect(actx.destination);o.start();o.stop(actx.currentTime+ms/1000)}catch(e){}
+}
+function setMsg(el,html,cls){el.innerHTML=html;el.className='msg'+(cls?' '+cls:'')}
+function startCam(video,msgEl){
+  stopCam();
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setMsg(msgEl,'هذا المتصفح لا يدعم الكاميرا. استخدم Chrome أو Edge','bad');return Promise.resolve(false)}
+  var id=useFacing?'':$('camSel').value;
+  var c={audio:false,video:id?{deviceId:{exact:id},width:{ideal:1280}}:{facingMode:facing,width:{ideal:1280}}};
+  return navigator.mediaDevices.getUserMedia(c).then(function(s){
+    stream=s;activeVideo=video;video.srcObject=s;useFacing=false;
+    var tr=s.getVideoTracks()[0], set=(tr&&tr.getSettings&&tr.getSettings())||{};
+    curDev=set.deviceId||'';
+    if(set.facingMode==='environment'||set.facingMode==='user') facing=set.facingMode;
+    video.classList.toggle('mirror',set.facingMode!=='environment');
+    listCams();return video.play().then(function(){return true});
+  }).catch(function(e){
+    setMsg(msgEl,'تعذّر تشغيل الكاميرا: '+(e.name==='NotAllowedError'?'لم يُسمح بالوصول إليها':e.name==='NotFoundError'?'لا توجد كاميرا':esc(e.name)),'bad');return false;
+  });
+}
+function stopCam(){
+  running=false;
+  if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
+  if(activeVideo){activeVideo.srcObject=null;activeVideo=null}
+  $('enShot').disabled=true;
+}
+function listCams(){
+  navigator.mediaDevices.enumerateDevices().then(function(ds){
+    var cur=curDev||$('camSel').value,h='';
+    ds.filter(function(d){return d.kind==='videoinput'}).forEach(function(d,i){
+      h+='<option value="'+esc(d.deviceId)+'"'+(d.deviceId===cur?' selected':'')+'>'+esc(d.label||('كاميرا '+(i+1)))+'</option>';
+    });
+    $('camSel').innerHTML=h;
+  }).catch(function(){});
+}
+
+/* ---------- attendance scanning ---------- */
+var streakId=null, streakN=0, unkN=0, lastNote={id:null,at:0}, lastUnk=0;
+/* one recognition step on an analysis result; returns a status string (used by tests too) */
+function decide(r){
+  var m=$('msg');
+  if(!r.count){streakId=null;streakN=0;unkN=0;return 'noface'}
+  if(r.box.w<r.fw*0.12){setMsg(m,'اقترب من الكاميرا','');streakId=null;streakN=0;return 'far'}
+  var ss=curSess();
+  if(!ss){setMsg(m,'أنشئ محاضرة جديدة أولاً','bad');return 'nosession'}
+  var res=match(r.desc,null);
+  if(!res.ok){
+    streakId=null;streakN=0;unkN++;
+    if(unkN>=3){
+      var amb=res.student&&res.d<=state.thr;
+      setMsg(m,amb?'تطابق غير واضح — سجّل يدوياً':'وجه غير معروف','bad');
+      if(Date.now()-lastUnk>4000){beep(220,300);lastUnk=Date.now()}
+      return amb?'ambiguous':'unknown';
+    }
+    return 'pending';
+  }
+  unkN=0;
+  var st=res.student;
+  if(streakId===st.id) streakN++; else {streakId=st.id;streakN=1}
+  if(streakN<2) return 'pending';
+  var fresh=!(lastNote.id===st.id&&Date.now()-lastNote.at<5000);
+  if(ss.records[st.id]){
+    if(fresh){setMsg(m,thumbHtml(st,'')+'<span>'+esc(st.name)+' — مسجَّل مسبقاً</span>','warn');beep(440,150);lastNote={id:st.id,at:Date.now()}}
+    return 'dup';
+  }
+  ss.records[st.id]={time:nowT(),manual:false};
+  save();renderAtt();
+  setMsg(m,thumbHtml(st,'')+'<span>✔ '+esc(st.name)+'</span>','ok');beep(880,150);lastNote={id:st.id,at:Date.now()};
+  return 'ok';
+}
+function scanLoop(){
+  var v=$('video');
+  (function step(){
+    if(!running||activeVideo!==v) return;
+    if(v.readyState<2||!v.videoWidth){setTimeout(step,200);return}
+    analyze(v).then(decide).catch(function(){}).then(function(){setTimeout(step,120)});
+  })();
+}
+$('camStart').onclick=function(){
+  if(!ready) return;
+  if(!state.students.some(function(s){return s.descs&&s.descs.length})){setMsg($('msg'),'لم يُسجَّل وجه أي طالب بعد. سجّل الوجوه من التبويب الثاني','bad');return}
+  startCam($('video'),$('msg')).then(function(ok){
+    if(!ok) return; running=true;streakId=null;streakN=0;unkN=0;
+    setMsg($('msg'),'الكاميرا تعمل — يقف الطالب أمامها','');scanLoop();
+  });
+};
+$('camStop').onclick=function(){stopCam();setMsg($('msg'),'الكاميرا متوقفة','')};
+function flip(btn){facing=(facing==='user'?'environment':'user');useFacing=true;if(stream)btn.click()}
+$('camFlip').onclick=function(){flip($('camStart'))};
+$('enFlip').onclick=function(){flip($('enStart'))};
+$('camSel').onchange=function(){if(stream&&activeVideo===$('video'))$('camStart').click()};
+$('thrSel').onchange=function(){state.thr=parseFloat($('thrSel').value);save()};
+
+/* ---------- students ---------- */
+function addStudent(name,num){
+  name=(name||'').trim(); if(!name) return false;
+  state.students.push({id:'s'+rnd(10),name:name,num:(num||'').trim(),descs:[],thumb:''});
+  return true;
+}
+$('stAdd').onclick=function(){
+  if(addStudent($('stName').value,$('stNum').value)){$('stName').value='';$('stNum').value='';save();renderAll();$('stName').focus()}
+};
+$('stName').addEventListener('keydown',function(e){if(e.key==='Enter')$('stAdd').click()});
+$('stBulkAdd').onclick=function(){
+  var n=0;
+  $('stBulk').value.split(/\r?\n/).forEach(function(line){var p=line.split(/[,،\t]/); if(addStudent(p[0],p[1])) n++});
+  if(n){$('stBulk').value='';save();renderAll()}
+};
+function renderStudents(){
+  var h='<tr><th>#</th><th>الصورة</th><th>الاسم</th><th>الرقم</th><th>لقطات الوجه</th><th></th></tr>';
+  state.students.forEach(function(s,i){
+    var n=(s.descs||[]).length;
+    h+='<tr><td>'+(i+1)+'</td><td>'+thumbHtml(s)+'</td><td>'+esc(s.name)+'</td><td>'+esc(s.num)+'</td><td>'+
+       (n?'<span class="pill ok">'+n+'</span>':'<span class="pill no">لا يوجد</span>')+'</td><td>'+
+       '<button class="b alt sm" data-pick="'+s.id+'">تسجيل الوجه</button> <button class="b danger sm" data-del="'+s.id+'">حذف</button></td></tr>';
+  });
+  if(!state.students.length) h+='<tr><td colspan="6" class="muted">لا يوجد طلاب بعد. أضف الأسماء من الأعلى.</td></tr>';
+  $('stTable').innerHTML=h;
+  var cur=$('enSel').value, o='';
+  state.students.forEach(function(s){o+='<option value="'+s.id+'"'+(s.id===cur?' selected':'')+'>'+esc(s.name)+((s.descs||[]).length?' ✔':'')+'</option>'});
+  $('enSel').innerHTML=o||'<option value="">— أضف الطلاب أولاً —</option>';
+}
+$('stTable').addEventListener('click',function(e){
+  var pick=e.target.getAttribute('data-pick'), id=e.target.getAttribute('data-del');
+  if(pick){$('enSel').value=pick;$('videoE').scrollIntoView({block:'center'});return}
+  if(!id) return;
+  var s=byId(id);
+  if(!s||!confirm('حذف الطالب «'+s.name+'» مع وجهه وسجل حضوره؟')) return;
+  state.students=state.students.filter(function(x){return x.id!==id});
+  state.sessions.forEach(function(ss){delete ss.records[id]});
+  save();renderAll();
+});
+
+/* ---------- enrollment ---------- */
+function enroll(input,fromCamera,sid){
+  var em=$('enMsg'), st=byId(sid||$('enSel').value);
+  if(!st){setMsg(em,'اختر الطالب أولاً','bad');return Promise.resolve('nostudent')}
+  if(!ready){setMsg(em,'محرك التعرف لم يجهز بعد','bad');return Promise.resolve('notready')}
+  setMsg(em,'جارٍ التحليل…','');
+  return analyze(input).then(function(r){
+    if(!r.count){setMsg(em,'لم يُعثر على وجه. حسّن الإضاءة وواجه الكاميرا','bad');return 'noface'}
+    if(r.count>1){setMsg(em,'ظهر أكثر من وجه. يجب أن يظهر الطالب وحده','bad');return 'many'}
+    if(r.box.w<r.fw*0.12){setMsg(em,'الوجه صغير جداً. اقترب من الكاميرا','bad');return 'far'}
+    var other=match(r.desc,st.id);
+    if(other.student&&other.d<=state.thr+0.08&&!confirm('تنبيه: هذا الوجه يشبه الطالب «'+other.student.name+'» المسجَّل مسبقاً. قد يحصل خلط بينهما عند الحضور.\nهل تريد الحفظ مع ذلك؟')){
+      setMsg(em,'أُلغي الحفظ','warn');return 'similar';
+    }
+    if(!st.descs) st.descs=[];
+    if(st.descs.length>=MAXS) st.descs.shift();
+    st.descs.push(r.desc); st.thumb=cropThumb(input,r);
+    save();renderAll();
+    setMsg(em,thumbHtml(st,'')+'<span>✔ حُفظ وجه '+esc(st.name)+' ('+st.descs.length+'/'+MAXS+')</span>','ok');beep(880,120);
+    if(fromCamera&&st.descs.length===1){ /* move on to the next student that still has no face */
+      var nx=state.students.filter(function(s){return !(s.descs&&s.descs.length)})[0];
+      if(nx) $('enSel').value=nx.id;
+    }
+    return 'saved';
+  }).catch(function(e){setMsg(em,'خطأ أثناء التحليل: '+esc(e&&e.message||e),'bad');return 'error'});
+}
+window.__enroll=enroll; window.__analyze=analyze; window.__decide=decide; window.__match=match;
+$('enStart').onclick=function(){
+  if(!ready) return;
+  startCam($('videoE'),$('enMsg')).then(function(ok){if(ok){$('enShot').disabled=false;setMsg($('enMsg'),'الكاميرا تعمل — اضغط «التقاط الوجه»','')}});
+};
+$('enStop').onclick=function(){stopCam();setMsg($('enMsg'),'الكاميرا متوقفة','')};
+$('enShot').onclick=function(){var v=$('videoE');if(stream&&v.videoWidth)enroll(v,true)};
+$('enFile').onchange=function(e){
+  var f=e.target.files[0]; if(!f) return;
+  var img=new Image(), url=URL.createObjectURL(f), sid=$('enSel').value;
+  img.onload=function(){enroll(img,false,sid).then(function(){URL.revokeObjectURL(url)})};
+  img.onerror=function(){setMsg($('enMsg'),'تعذّرت قراءة الصورة','bad');URL.revokeObjectURL(url)};
+  img.src=url; e.target.value='';
+};
+$('enClear').onclick=function(){
+  var st=byId($('enSel').value); if(!st||!(st.descs&&st.descs.length)) return;
+  if(!confirm('مسح وجه الطالب «'+st.name+'»؟')) return;
+  st.descs=[];st.thumb='';save();renderAll();setMsg($('enMsg'),'مُسح الوجه','warn');
+};
+
+/* ---------- students list sharing ---------- */
+function cleanStudent(n){
+  if(!n||typeof n.name!=='string'||typeof n.id!=='string'||!/^s[A-Z0-9]{4,24}$/.test(n.id)) return null;
+  var descs=[];
+  if(Array.isArray(n.descs)) n.descs.slice(0,MAXS).forEach(function(d){
+    if(Array.isArray(d)&&d.length===128&&d.every(function(x){return typeof x==='number'&&isFinite(x)})) descs.push(d);
+  });
+  return {id:n.id,name:n.name.trim(),num:String(n.num||'').trim(),descs:descs,thumb:thumbOk(n.thumb)?n.thumb:''};
+}
+$('expStudents').onclick=function(){
+  if(!state.students.length){alert('أضف الطلاب أولاً');return}
+  download('students_faces_'+today()+'.json',JSON.stringify({type:'face_students_v1',students:state.students}),'application/json');
+};
+$('impStudents').onchange=function(e){
+  var f=e.target.files[0]; if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{
+      var o=JSON.parse(rd.result); if(!o||o.type!=='face_students_v1'||!Array.isArray(o.students)) throw 0;
+      var added=0,upd=0;
+      o.students.forEach(function(raw){
+        var n=cleanStudent(raw); if(!n||!n.name) return;
+        var ex=byId(n.id);
+        if(ex){ex.name=n.name;ex.num=n.num;ex.descs=n.descs;ex.thumb=n.thumb;upd++}
+        else{state.students.push(n);added++}
+      });
+      save();renderAll();
+      alert('أُضيف '+added+' طالباً'+(upd?('، وحُدّثت بيانات '+upd+' موجودين مسبقاً'):'')+'. سجل الحضور عندك لم يتغيّر.');
+    }catch(x){alert('الملف ليس قائمة طلاب صالحة')}
+    e.target.value='';
+  };
+  rd.readAsText(f);
+};
+
+/* ---------- sessions ---------- */
+$('sessNew').onclick=function(){
+  var t=$('sessTitle').value.trim()||('محاضرة '+today());
+  var s={id:'L'+rnd(8),title:t,date:today(),records:{}};
+  state.sessions.push(s);state.current=s.id;$('sessTitle').value='';save();renderAll();
+};
+$('sessSel').onchange=function(){state.current=$('sessSel').value;save();renderAll()};
+function renderSessSel(){
+  var h='';
+  if(!state.sessions.length) h='<option value="">— لا توجد محاضرة —</option>';
+  state.sessions.slice().reverse().forEach(function(s){
+    h+='<option value="'+s.id+'"'+(s.id===state.current?' selected':'')+'>'+esc(s.title)+' ('+s.date+')</option>';
+  });
+  $('sessSel').innerHTML=h;
+}
+function renderAtt(){
+  var ss=curSess(), n=0, q=$('attFilter').value.trim(), h='<tr><th></th><th>الاسم</th><th>الحالة</th><th>الوقت</th><th></th></tr>';
+  state.students.forEach(function(s){
+    var r=ss&&ss.records[s.id]; if(r) n++;
+    if(q&&s.name.indexOf(q)<0&&String(s.num).indexOf(q)<0) return;
+    h+='<tr><td>'+thumbHtml(s)+'</td><td>'+esc(s.name)+'</td><td>'+(r?'<span class="pill ok">حاضر</span>'+(r.manual?' <span class="pill man">يدوي</span>':''):'<span class="pill no">غائب</span>')+'</td><td>'+(r?r.time:'')+'</td><td>'+
+      (ss?(r?'<button class="b danger sm" data-un="'+s.id+'">إلغاء</button>':'<button class="b alt sm" data-man="'+s.id+'">حاضر يدوياً</button>'):'')+'</td></tr>';
+  });
+  $('attTable').innerHTML=h;
+  $('count').textContent=n+' / '+state.students.length;
+}
+$('attFilter').addEventListener('input',renderAtt);
+$('attTable').addEventListener('click',function(e){
+  var ss=curSess(); if(!ss) return;
+  var m=e.target.getAttribute('data-man'), u=e.target.getAttribute('data-un');
+  if(m){ss.records[m]={time:nowT(),manual:true}}
+  else if(u){delete ss.records[u]}
+  else return;
+  save();renderAtt();
+});
+
+/* ---------- log & export ---------- */
+function download(name,text,type){
+  var b=new Blob([text],{type:type}),a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500);
+}
+function csvCell(v){v=String(v==null?'':v);if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'}
+function toCsv(rows){return '\uFEFF'+rows.map(function(r){return r.map(csvCell).join(',')}).join('\r\n')}
+function sessCsv(ss){
+  var rows=[['الاسم','الرقم','الحالة','الوقت','طريقة التسجيل']];
+  state.students.forEach(function(s){var r=ss.records[s.id];
+    rows.push([s.name,s.num,r?'حاضر':'غائب',r?r.time:'',r?(r.manual?'يدوي':'وجه'):''])});
+  return toCsv(rows);
+}
+function matrixCsv(){
+  var head=['الاسم','الرقم'];state.sessions.forEach(function(ss){head.push(ss.title+' '+ss.date)});head.push('عدد الحضور','عدد الغياب');
+  var rows=[head];
+  state.students.forEach(function(s){
+    var row=[s.name,s.num],p=0;
+    state.sessions.forEach(function(ss){if(ss.records[s.id]){p++;row.push('حاضر')}else row.push('غائب')});
+    row.push(p,state.sessions.length-p);rows.push(row);
+  });
+  return toCsv(rows);
+}
+$('expMatrix').onclick=function(){
+  if(!state.sessions.length){alert('لا توجد محاضرات مسجّلة بعد');return}
+  download('attendance_all_'+today()+'.csv',matrixCsv(),'text/csv;charset=utf-8');
+};
+$('expBackup').onclick=function(){download('face_attendance_backup_'+today()+'.json',JSON.stringify(state),'application/json')};
+$('impBackup').onchange=function(e){
+  var f=e.target.files[0]; if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{var o=JSON.parse(rd.result); if(!o||!Array.isArray(o.students)||!Array.isArray(o.sessions)) throw 0;
+      if(!confirm('سيُستبدل كل ما في البرنامج بمحتوى النسخة الاحتياطية. متابعة؟')) return;
+      var sts=[];o.students.forEach(function(x){var c=cleanStudent(x);if(c)sts.push(c)});
+      var ses=[];o.sessions.forEach(function(x){
+        if(!x||typeof x.id!=='string'||typeof x.title!=='string') return;
+        var rec={};Object.keys(x.records||{}).forEach(function(k){var r=x.records[k];if(r&&/^\d\d:\d\d:\d\d$/.test(r.time))rec[k]={time:r.time,manual:!!r.manual}});
+        ses.push({id:x.id,title:x.title,date:/^\d{4}-\d\d-\d\d$/.test(x.date)?x.date:today(),records:rec});
+      });
+      state={students:sts,sessions:ses,current:typeof o.current==='string'?o.current:null,thr:[0.45,0.5,0.55].indexOf(o.thr)>=0?o.thr:0.45};
+      if(!curSess()) state.current=ses.length?ses[ses.length-1].id:null;
+      save();renderAll();
+    }catch(x){alert('الملف ليس نسخة احتياطية صالحة')}
+    e.target.value='';
+  };
+  rd.readAsText(f);
+};
+function renderLog(){
+  var h='<tr><th>المحاضرة</th><th>التاريخ</th><th>الحاضرون</th><th></th></tr>';
+  state.sessions.slice().reverse().forEach(function(ss){
+    var n=state.students.filter(function(s){return ss.records[s.id]}).length;
+    h+='<tr><td>'+esc(ss.title)+'</td><td>'+esc(ss.date)+'</td><td>'+n+' / '+state.students.length+'</td><td>'+
+       '<button class="b alt sm" data-exp="'+esc(ss.id)+'">تصدير</button> <button class="b danger sm" data-dels="'+esc(ss.id)+'">حذف</button></td></tr>';
+  });
+  if(!state.sessions.length) h+='<tr><td colspan="4" class="muted">لا توجد محاضرات بعد.</td></tr>';
+  $('logTable').innerHTML=h;
+}
+$('logTable').addEventListener('click',function(e){
+  var x=e.target.getAttribute('data-exp'), d=e.target.getAttribute('data-dels');
+  var ss=state.sessions.filter(function(s){return s.id===(x||d)})[0]; if(!ss) return;
+  if(x) download('attendance_'+ss.date+'.csv',sessCsv(ss),'text/csv;charset=utf-8');
+  else if(confirm('حذف محاضرة «'+ss.title+'» مع سجل حضورها؟')){
+    state.sessions=state.sessions.filter(function(s){return s.id!==d});
+    if(state.current===d) state.current=state.sessions.length?state.sessions[state.sessions.length-1].id:null;
+    save();renderAll();
+  }
+});
+
+function renderAll(){renderSessSel();renderAtt();renderStudents();renderLog();$('thrSel').value=String(state.thr)}
+load();
+if(!curSess()) state.current=state.sessions.length?state.sessions[state.sessions.length-1].id:null;
+renderAll();
+/* ---------- mobile install (only when served over http/https) ---------- */
+function setOs(a){
+  $('osAndroid').classList.toggle('on',a);$('osIphone').classList.toggle('on',!a);
+  $('osAndroid').setAttribute('aria-pressed',a?'true':'false');$('osIphone').setAttribute('aria-pressed',a?'false':'true');
+  $('helpAndroid').classList.toggle('on',a);$('helpIphone').classList.toggle('on',!a);
+}
+$('osAndroid').onclick=function(){setOs(true)};$('osIphone').onclick=function(){setOs(false)};
+setOs(!/iPhone|iPad|iPod/i.test(navigator.userAgent)&&!(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1));
+if(/^https?:$/.test(location.protocol)){
+  $('tabInstall').hidden=false;
+  var off=$('offState');
+  if('serviceWorker' in navigator&&window.caches){
+    navigator.serviceWorker.register('./sw.js').then(function(){
+      (function poll(){
+        caches.match('./models/face_recognition_model.bin').then(function(r){
+          if(r){off.textContent='جاهز للعمل بدون نت ✔';off.className='';off.style.color='var(--ok)'}
+          else{off.textContent='جارٍ تنزيل الملفات للعمل بدون نت… أبقِ الصفحة مفتوحة';setTimeout(poll,1500)}
+        }).catch(function(){setTimeout(poll,3000)});
+      })();
+    }).catch(function(){off.textContent='تعذّر تفعيل العمل بدون نت في هذا المتصفح';off.style.color='var(--bad)'});
+  }else{off.textContent='هذا المتصفح لا يدعم العمل بدون نت';off.style.color='var(--bad)'}
+}
+window.__ready=initEngine();
+})();
+</script>
+</body>
+</html>
