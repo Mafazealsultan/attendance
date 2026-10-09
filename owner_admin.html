@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>أداة المالك — تفعيل أجهزة نظام الحضور</title>
+<style>
+:root{--bg:#f3f5f8;--card:#fff;--ink:#18212f;--muted:#5d6b7e;--line:#d9dfe8;--brand:#14506e;--ok:#16794a;--ok-bg:#e2f5ea;--warn:#8a5a00;--warn-bg:#fff2cf;--bad:#a32727;--bad-bg:#fde5e5}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Tahoma,Arial,sans-serif;font-size:16px;line-height:1.6}
+header{background:var(--brand);color:#fff;padding:14px 20px}
+header h1{margin:0;font-size:20px}
+main{max-width:860px;margin:0 auto;padding:16px}
+section{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px;margin-bottom:16px}
+h2{margin:0 0 10px;font-size:18px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+input[type=text],input[type=date],textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+textarea{width:100%;min-height:90px;direction:ltr;font-family:Consolas,monospace;font-size:14px}
+.ltr{direction:ltr;font-family:Consolas,monospace}
+button.b,label.b{font:inherit;padding:8px 16px;border-radius:6px;border:1px solid var(--brand);background:var(--brand);color:#fff;cursor:pointer;display:inline-block}
+.b.alt{background:#fff;color:var(--brand)}
+.b.danger{border-color:var(--bad);background:#fff;color:var(--bad)}
+.b.sm{padding:3px 10px;font-size:14px}
+button.b:disabled{opacity:.5;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #f0a020;outline-offset:1px}
+.msg{padding:10px 14px;border-radius:8px;font-weight:700;background:#eef2f6;color:var(--muted);margin:8px 0}
+.msg.ok{background:var(--ok-bg);color:var(--ok)}.msg.bad{background:var(--bad-bg);color:var(--bad)}.msg.warn{background:var(--warn-bg);color:var(--warn)}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:10px 14px;font-size:14px;margin:10px 0}
+.muted{color:var(--muted);font-size:14px}
+table{border-collapse:collapse;width:100%;margin-top:8px}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:right}
+th{background:#eef2f6}
+.tablewrap{overflow-x:auto}
+</style>
+</head>
+<body>
+<header><h1>أداة المالك — تفعيل أجهزة نظام الحضور</h1></header>
+<main>
+
+<section>
+  <h2>1. مفتاح المالك</h2>
+  <div id="keyMsg" class="msg" role="status">جارٍ الفحص…</div>
+  <div class="row">
+    <button class="b" id="keyNew">إنشاء مفتاح جديد</button>
+    <button class="b alt" id="keyPub" disabled>تنزيل owner-key.js (يُرفع إلى الموقع)</button>
+  </div>
+  <div class="row">
+    <button class="b alt" id="keyBackup" disabled>تنزيل نسخة احتياطية للمفتاح السري</button>
+    <label class="b alt">استرجاع المفتاح السري من نسخة احتياطية
+      <input type="file" id="keyRestore" accept=".json,application/json" style="display:none">
+    </label>
+  </div>
+  <div class="note">المفتاح السري هو ما يثبت أنك المالك. من يحصل عليه يستطيع تفعيل أي جهاز. احتفظ بنسخته الاحتياطية في مكان آمن ولا ترسله لأحد، ولا ترفعه إلى الموقع. الملف الوحيد الذي يُرفع هو owner-key.js.</div>
+</section>
+
+<section>
+  <h2>2. إصدار رمز تفعيل لجهاز</h2>
+  <div class="row">
+    <label for="who">اسم التدريسي:</label>
+    <input type="text" id="who" size="26" placeholder="للتوثيق فقط">
+  </div>
+  <div class="row">
+    <label for="dev">رمز الجهاز:</label>
+    <input type="text" id="dev" class="ltr" size="18" placeholder="XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+  </div>
+  <div class="row">
+    <label for="exp">ينتهي في (اختياري):</label>
+    <input type="date" id="exp">
+    <span class="muted">اتركه فارغاً لتفعيل دائم</span>
+  </div>
+  <div class="row"><button class="b" id="issue" disabled>إصدار رمز التفعيل</button></div>
+  <div id="issMsg" class="msg" role="status">أدخل رمز الجهاز الذي أرسله التدريسي</div>
+  <textarea id="out" readonly aria-label="رمز التفعيل الصادر"></textarea>
+  <div class="row"><button class="b alt" id="copy" disabled>نسخ رمز التفعيل</button></div>
+</section>
+
+<section>
+  <h2>3. سجل الأجهزة المفعّلة</h2>
+  <p class="muted">للتوثيق فقط. حذف سطر من هنا لا يلغي تفعيل الجهاز.</p>
+  <div class="row"><button class="b alt" id="logCsv">تصدير السجل (CSV)</button></div>
+  <div class="tablewrap"><table id="log"></table></div>
+</section>
+
+</main>
+<script>
+(function(){
+'use strict';
+var KK='face_att_owner_key_v1', LK='face_att_owner_log_v1';
+var $=function(id){return document.getElementById(id)};
+var priv=null, pub=null, log=[];
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function setMsg(el,t,c){el.textContent=t;el.className='msg'+(c?' '+c:'')}
+function p2(n){return (n<10?'0':'')+n}
+function today(){var d=new Date();return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+function download(name,text,type){
+  var b=new Blob([text],{type:type}),a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500);
+}
+function b64u(buf){var b=new Uint8Array(buf),s='';for(var i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function validJwk(j){return j&&j.kty==='EC'&&j.crv==='P-256'&&typeof j.x==='string'&&typeof j.y==='string'&&typeof j.d==='string'}
+function store(){
+  try{localStorage.setItem(KK,JSON.stringify(priv));return true}catch(e){return false}
+}
+function refresh(){
+  var has=!!priv;
+  $('keyPub').disabled=$('keyBackup').disabled=$('issue').disabled=!has;
+  if(has) setMsg($('keyMsg'),'المفتاح موجود على هذه الحاسبة ✔  (بصمته: '+pub.x.slice(0,10)+')','ok');
+  else setMsg($('keyMsg'),'لا يوجد مفتاح بعد. أنشئ مفتاحاً جديداً أو استرجعه من نسخة احتياطية','warn');
+}
+function setKey(j){priv=j;pub={kty:'EC',crv:'P-256',x:j.x,y:j.y}}
+
+if(!window.crypto||!crypto.subtle){setMsg($('keyMsg'),'هذا المتصفح لا يدعم التشفير المطلوب. افتح الملف في Chrome أو Edge','bad');return}
+
+try{var s=localStorage.getItem(KK);if(s){var j=JSON.parse(s);if(validJwk(j))setKey(j)}}catch(e){}
+try{var l=localStorage.getItem(LK);if(l)log=JSON.parse(l)||[]}catch(e){}
+
+$('keyNew').onclick=function(){
+  if(priv&&!confirm('يوجد مفتاح حالي. إنشاء مفتاح جديد يُبطل كل رموز التفعيل السابقة، ويجب رفع owner-key.js الجديد وإعادة تفعيل كل الأجهزة.\nمتابعة؟')) return;
+  crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']).then(function(kp){
+    return crypto.subtle.exportKey('jwk',kp.privateKey);
+  }).then(function(j){
+    setKey({kty:'EC',crv:'P-256',x:j.x,y:j.y,d:j.d});
+    if(!store()) alert('تعذّر الحفظ في المتصفح. نزّل النسخة الاحتياطية الآن.');
+    refresh();
+    alert('أُنشئ المفتاح. نزّل الآن: (1) owner-key.js لرفعه إلى الموقع، (2) النسخة الاحتياطية للمفتاح السري.');
+  }).catch(function(e){setMsg($('keyMsg'),'فشل إنشاء المفتاح: '+(e&&e.message||e),'bad')});
+};
+$('keyPub').onclick=function(){
+  download('owner-key.js','window.__OWNER_PUB='+JSON.stringify(pub)+';\n','text/javascript');
+};
+$('keyBackup').onclick=function(){
+  download('owner_SECRET_key_backup_'+today()+'.json',JSON.stringify({type:'face_att_owner_key_v1',key:priv}),'application/json');
+};
+$('keyRestore').onchange=function(e){
+  var f=e.target.files[0]; if(!f) return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{var o=JSON.parse(rd.result);if(!o||o.type!=='face_att_owner_key_v1'||!validJwk(o.key)) throw 0;
+      if(priv&&priv.d!==o.key.d&&!confirm('سيُستبدل المفتاح الحالي بالمفتاح الموجود في النسخة الاحتياطية. متابعة؟')) return;
+      setKey({kty:'EC',crv:'P-256',x:o.key.x,y:o.key.y,d:o.key.d});store();refresh();
+    }catch(x){alert('الملف ليس نسخة احتياطية صالحة للمفتاح')}
+    e.target.value='';
+  };
+  rd.readAsText(f);
+};
+
+$('issue').onclick=function(){
+  var d=$('dev').value.toUpperCase().replace(/[^A-Z0-9]/g,''), im=$('issMsg');
+  $('out').value='';$('copy').disabled=true;
+  if(!/^[A-Z0-9]{12}$/.test(d)){setMsg(im,'رمز الجهاز يجب أن يكون 12 حرفاً/رقماً (مثل ABCD-EFGH-JKLM)','bad');return}
+  var e=$('exp').value, exp='00000000';
+  if(e){ if(e<today()){setMsg(im,'تاريخ الانتهاء في الماضي','bad');return} exp=e.replace(/-/g,'') }
+  crypto.subtle.importKey('jwk',{kty:'EC',crv:'P-256',x:priv.x,y:priv.y,d:priv.d,ext:true},{name:'ECDSA',namedCurve:'P-256'},false,['sign']).then(function(k){
+    return crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},k,new TextEncoder().encode('FA1|'+d+'|'+exp));
+  }).then(function(sig){
+    $('out').value=exp+'.'+b64u(sig);$('copy').disabled=false;
+    log.push({who:$('who').value.trim(),dev:d,exp:e||'',at:today()});
+    try{localStorage.setItem(LK,JSON.stringify(log))}catch(x){}
+    renderLog();
+    setMsg(im,'صدر رمز التفعيل ✔  انسخه وأرسله للتدريسي','ok');
+  }).catch(function(x){setMsg(im,'فشل الإصدار: '+(x&&x.message||x),'bad')});
+};
+$('copy').onclick=function(){
+  var t=$('out').value;
+  (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t):Promise.reject()).then(function(){setMsg($('issMsg'),'نُسخ رمز التفعيل','ok')},function(){$('out').select();setMsg($('issMsg'),'حدّد النص وانسخه يدوياً (Ctrl+C)','warn')});
+};
+
+function renderLog(){
+  var h='<tr><th>التدريسي</th><th>رمز الجهاز</th><th>تاريخ الإصدار</th><th>ينتهي في</th><th></th></tr>';
+  log.slice().reverse().forEach(function(r,i){
+    var idx=log.length-1-i;
+    h+='<tr><td>'+esc(r.who)+'</td><td class="ltr">'+esc(r.dev.slice(0,4)+'-'+r.dev.slice(4,8)+'-'+r.dev.slice(8))+'</td><td>'+esc(r.at)+'</td><td>'+(r.exp?esc(r.exp):'دائم')+'</td><td><button class="b danger sm" data-i="'+idx+'">حذف السطر</button></td></tr>';
+  });
+  if(!log.length) h+='<tr><td colspan="5" class="muted">لم يصدر أي رمز بعد.</td></tr>';
+  $('log').innerHTML=h;
+}
+$('log').addEventListener('click',function(e){
+  var i=e.target.getAttribute('data-i'); if(i===null) return;
+  log.splice(+i,1);try{localStorage.setItem(LK,JSON.stringify(log))}catch(x){}renderLog();
+});
+$('logCsv').onclick=function(){
+  var cell=function(v){v=String(v==null?'':v);if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
+  var rows=[['التدريسي','رمز الجهاز','تاريخ الإصدار','ينتهي في']];
+  log.forEach(function(r){rows.push([r.who,r.dev,r.at,r.exp||'دائم'])});
+  download('activation_log_'+today()+'.csv','﻿'+rows.map(function(r){return r.map(cell).join(',')}).join('\r\n'),'text/csv;charset=utf-8');
+};
+refresh();renderLog();
+})();
+</script>
+</body>
+</html>
